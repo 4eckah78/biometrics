@@ -15,21 +15,6 @@ def template_matching(image_path, template_path):
 
     cv2.rectangle(image, top_left, (top_left[0] + w, top_left[1] + h), (0, 255, 0), 1)
 
-    # plt.figure(figsize=(5, 2))
-    # plt.imshow(template, cmap='gray')
-    # plt.title('template')
-    # plt.xticks([])
-    # plt.yticks([])
-    # plt.show()
-    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # plt.imshow(image, cmap='gray')
-    # plt.title('Result')
-    # plt.xticks([])
-    # plt.yticks([])
-    # plt.show()
-    # cv2.imwrite(f"my_result{count}.jpg", image)
-    # # print(res.shape)
-    # count += 1
     plt.subplot(131)
     plt.imshow(res, cmap='gray')
     plt.title('Matching Result'), plt.xticks([]), plt.yticks([])
@@ -45,12 +30,9 @@ def template_matching(image_path, template_path):
     plt.title('Template')
     plt.xticks([])
     plt.yticks([])
-    # plt.show()
-    plt.savefig(f"result{count}.jpg", format='jpg')
+    plt.show()
+    # plt.savefig(f"./results/results{count}.jpg", format='jpg')
     count += 1
-    # cv2.imshow('template', template)
-    # cv2.imshow('Result', image)
-    # cv2.waitKey(0)
 
 
 images_folder = "./images"
@@ -66,5 +48,3 @@ for template_path in templates:
     for image_path in images:
         print(f'template {template_path} to image {image_path}')
         template_matching(image_path, template_path)
-
-# template_matching("../ORL_face_database/Face.jpg", "../ORL_face_database/Temp.jpg")

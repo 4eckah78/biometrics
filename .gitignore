@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+my_images/
+my_images_templates/
+results/
+protected_low/
+
 # Distribution / packaging
 .idea/
 .Python
