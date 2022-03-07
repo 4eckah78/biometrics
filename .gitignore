@@ -10,6 +10,7 @@ my_images/
 my_images_templates/
 results/
 protected_low/
+viola_results/
 
 # Distribution / packaging
 .idea/
