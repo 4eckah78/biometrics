@@ -29,7 +29,7 @@ templates = [templates_folder + "/" + templates_name for templates_name in templ
 
 to_draw = []
 count = 20
-SAVE = True
+SAVE = False
 amount = 1
 columns = 4
 for template_path in templates:
