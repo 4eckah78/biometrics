@@ -263,6 +263,16 @@ def voting(train, test, parameters):
                 answers_to_image_1[answer] = 1
         best_size = sorted(answers_to_image_1.items(), key=lambda item: item[1], reverse=True)[0]
         voted_answers.append(best_size[0])
+        for image, person in zip(train[0], train[1]):
+            if person == best_size[0]:
+                plt.subplot(1, 2, 1)
+                plt.imshow(test[0][i], cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Query Image')
+                plt.subplot(1, 2, 2)
+                plt.imshow(image, cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Result')
+                plt.suptitle(f"Voting")
+                plt.show()
+                break
+
     return voted_answers
 
 
@@ -275,7 +285,7 @@ def test_voting(train, test, parameters):
     return sum / len(test[0])
 
 
-def cross_validation(data, etalons_range, SHOW=False):
+def cross_validation(data, etalons_range=[5,6], SHOW=False):
     methods = [histogram, dft, dct, gradient, scale]
     res = []
     start, end = etalons_range
@@ -331,10 +341,13 @@ def cross_validation(data, etalons_range, SHOW=False):
 
 
 def vote_classifier(data):
-    parameters, train_size = cross_validation(data)
-    x_train, y_train, x_test, _ = split_data(data, train_size)
+    # parameters, train_size = cross_validation(data)
+    train_size = 5
+    parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=True)
     train = mesh_data([x_train, y_train])
-    return voting(train, x_test, parameters)
+    test = mesh_data([x_test, y_test])
+    return voting(train, test, parameters)
 
 
 if __name__ == "__main__":
@@ -342,29 +355,44 @@ if __name__ == "__main__":
     data = load_faces_from("./orl_faces/s")
     print(f"Database is uploaded: ORL faces, {len(data[0])} images, 40 classes, 10 images in each class")
     print("="*50)
+    #
+    # print("Check train for each method:")
+    # x_train, x_test, y_train, y_test = split_data(data, 1)
+    # train = mesh_data([x_train, y_train])
+    # test = mesh_data([x_test, y_test])
+    #
+    # for method, param in [(histogram, 18), (dft, 18), (dct, 8), (gradient, 8), (scale, 0.23)]:
+    #     classf = test_classifier(train, train, method, param)
+    #     print(f"for {method.__name__} got {int(classf)*100}% score")
+    # print("="*50)
+    #
+    # print("Check test for each method:")
+    # for method, param in [(histogram, 28), (dft, 18), (dct, 18), (gradient, 2), (scale, 0.23)]:
+    #     classf = test_classifier(train, test, method, param)
+    #     print(f"for {method.__name__} got {classf} score")
+    # print("="*50)
+    #
+    # print("Cross-validation...")
+    # parameters, train_size, score = cross_validation(data, etalons_range=[1, 3], SHOW=False)
+    # print("!"*50)
+    # print(f"best train size: {train_size}\n with parameters: {parameters}\n and score: {score}")
+    # print("!" * 50)
 
-    print("Check train for each method:")
-    x_train, x_test, y_train, y_test = split_data(data, 1)
-    train = mesh_data([x_train, y_train])
-    test = mesh_data([x_test, y_test])
+    # vote_classifier(data)
 
-    for method, param in [(histogram, 18), (dft, 18), (dct, 8), (gradient, 8), (scale, 0.23)]:
-        classf = test_classifier(train, train, method, param)
-        print(f"for {method.__name__} got {int(classf)*100}% score")
-    print("="*50)
+    train_size = 5
+    parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=True)
+    # cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
+    # _, x_test, _, y_test = split_data(cloaked_data, 5)
+    # train = mesh_data([x_train, y_train])
+    # test = mesh_data([x_test, y_test])
+    # voting(train, test, parameters)
 
-    print("Check test for each method:")
-    for method, param in [(histogram, 28), (dft, 18), (dct, 18), (gradient, 2), (scale, 0.23)]:
-        classf = test_classifier(train, test, method, param)
-        print(f"for {method.__name__} got {classf} score")
-    print("="*50)
 
-    print("Cross-validation...")
-    parameters, train_size, score = cross_validation(data, etalons_range=[1, 3], SHOW=False)
-    print("!"*50)
-    print(f"best train size: {train_size}\n with parameters: {parameters}\n and score: {score}")
-    print("!" * 50)
-
+    masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
+    test = [masked_data[0], masked_data[1]]
+    voting(train, test, parameters)
 
 '''
 dft = 15
