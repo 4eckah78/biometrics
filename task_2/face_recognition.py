@@ -5,13 +5,19 @@ import cv2
 import matplotlib.pyplot as plt
 
 
-def histogram(image, BINS=30):
-    histogram, bin_edges = np.histogram(image, bins=BINS, range=(0, 1))
-    # plt.hist(image.flatten(), bins=BINS, range=(0, 1))
-    return histogram
+def histogram(image, BINS=30, SHOW=False):
+    hist, bin_edges = np.histogram(image, bins=BINS, range=(0, 1))
+    if SHOW:
+        plt.imshow(image, cmap="gray"), plt.xticks([]), plt.yticks([])
+        plt.title("Original")
+        plt.show()
+        plt.hist(image.flatten(), bins=BINS, range=(0, 1))
+        plt.title(f"hist, BINS={BINS}")
+        plt.show()
+    return hist
 
 
-def dft(image, p=13):
+def dft(image, p=13, SHOW=False):
     f = np.fft.fft2(image)
     f = np.abs(f[0:p, 0:p])
     zigzag = []
@@ -21,10 +27,14 @@ def dft(image, p=13):
         if len(diag) % 2:
             diag.reverse()
         zigzag += diag
+    if SHOW:
+        plt.imshow(f, cmap="gray")
+        plt.title(f"dft, p={p}")
+        plt.show()
     return zigzag[1:]
 
 
-def dct(image, p=13):
+def dct(image, p=13, SHOW=False):
     c = sc_dct(image, axis=1)
     c = sc_dct(c, axis=0)
     c = c[0:p, 0:p]
@@ -35,55 +45,86 @@ def dct(image, p=13):
         if len(diag) % 2:
             diag.reverse()
         zigzag += diag
+    if SHOW:
+        plt.imshow(c, cmap="gray")
+        plt.title(f"dct, p={p}")
+        plt.show()
     return zigzag
 
 
-def gradient(image, window_width=2):
-    height = image.shape[0]
-    step, low = 0, 0
-    up = window_width
+# def gradient(image, window_width=2, SHOW=False):
+#     height = image.shape[0]
+#     step, low = 0, 0
+#     up = window_width
+#     result = []
+#
+#     while up <= height:
+#         # window = image[low:up, :]
+#         dist = distance(image[low:low + (up - low) // 2, :], image[low + (up - low) // 2:up - window_width % 2, :])
+#         # cv2.rectangle(image, (0, low), (image.shape[1], up), 0, 1)
+#         # cv2.line(image, (0, low+(up - low)//2), (image.shape[1], low+(up - low)//2), 60, 1)
+#         # plt.imshow(image, cmap="gray")
+#         # plt.show()
+#         result.append(dist)
+#         step += 1
+#         low = step * window_width
+#         up = (step + 1) * window_width
+#     result = np.array(result)
+#     if SHOW:
+#         plt.plot(range(0, len(result)), result)
+#         plt.title(f"gradient, W={window_width}")
+#         plt.show()
+#     return result
+
+
+def gradient(image, n = 2):
+    shape = image.shape[0]
+    i, l = 0, 0
+    r = n
     result = []
 
-    while up <= height:
-        # window = image[low:up, :]
-        dist = distance(image[low:low + (up - low) // 2, :], image[low + (up - low) // 2:up - window_width % 2, :])
-        # cv2.rectangle(image, (0, low), (image.shape[1], up), 0, 1)
-        # cv2.line(image, (0, low+(up - low)//2), (image.shape[1], low+(up - low)//2), 60, 1)
-        # plt.imshow(image, cmap="gray")
-        # plt.show()
-        result.append(dist)
-        step += 1
-        low = step * window_width
-        up = (step + 1) * window_width
+    while r <= shape:
+        window = image[l:r, :]
+        result.append(np.sum(window))
+        i += 1
+        l = i * n
+        r = (i + 1) * n
     result = np.array(result)
     return result
 
 
-def scale(image, scale=0.35):
+def scale(image, scale=0.35, SHOW=False):
     h = image.shape[0]
     w = image.shape[1]
     new_size = (int(w * scale), int(h * scale))
+    if SHOW:
+        plt.imshow(cv2.resize(image, new_size, interpolation=cv2.INTER_AREA), cmap="gray")
+        plt.title(f"scale, sc={scale}")
+        plt.show()
     return cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
 
 
-def load_faces_from(data_folder):
+def load_faces_from(data_folder, type=".pgm"):
     data_faces = []
     data_target = []
     for i in range(1, 41):
         for j in range(1, 11):
-            image = cv2.cvtColor(cv2.imread(f"{data_folder}{i}/{j}.pgm"), cv2.COLOR_BGR2GRAY)
-            data_faces.append(image / 255)
-            data_target.append(i - 1)
+            image = cv2.imread(f"{data_folder}{i}/{j}{type}")
+            if image is not None:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                data_faces.append(image / 255)
+                data_target.append(i - 1)
     return [data_faces, data_target]
 
 
-def draw_splited_data(x_train, x_test, images_per_person_in_train):
+def draw_splited_data(x_train, x_test, images_per_person_in_train, rows=5):
     K = int((len(x_train) + len(x_test)) / 10)
     i, j = 0, 0
     plt.rcParams.update({'font.size': 7})
-    AMOUNT_OF_ROWS = 8
-    list_of_classes = [AMOUNT_OF_ROWS for _ in range(K // AMOUNT_OF_ROWS)]
-    list_of_classes.append(K % AMOUNT_OF_ROWS)
+    # AMOUNT_OF_ROWS = 8
+    # list_of_classes = [AMOUNT_OF_ROWS for _ in range(K // AMOUNT_OF_ROWS)]
+    # list_of_classes.append(K % AMOUNT_OF_ROWS)
+    list_of_classes = [rows]
     for rows in list_of_classes:
         draw_train = images_per_person_in_train
         index = 1
@@ -118,11 +159,14 @@ def split_data(data, images_per_person_in_train=5, DRAW=False):
     x_train, x_test, y_train, y_test = [], [], [], []
 
     for i in range(0, amount_of_images, images_per_person):
-        x_train.extend(data[0][i: i + images_per_person_in_train])
-        y_train.extend(data[1][i: i + images_per_person_in_train])
+        indexes = list(range(i, i + images_per_person))
+        train_indexes = rnd.sample(indexes, images_per_person_in_train)
+        x_train.extend([data[0][index] for index in train_indexes])
+        y_train.extend([data[1][index] for index in train_indexes])
 
-        x_test.extend(data[0][i + images_per_person_in_train: i + images_per_person])
-        y_test.extend(data[1][i + images_per_person_in_train: i + images_per_person])
+        test_indexes = set(indexes) - set(train_indexes)
+        x_test.extend([data[0][index] for index in test_indexes])
+        y_test.extend([data[1][index] for index in test_indexes])
 
     if DRAW:
         draw_splited_data(x_train, x_test, images_per_person_in_train)
@@ -173,18 +217,18 @@ def test_classifier(train, test, method, parameter):
     return correct_answers / len(answers)
 
 
-def fit(train, test, method):
+def fit(train, test, method, SHOW=False):
     if method not in [histogram, dft, dct, gradient, scale]:
         return []
     param = (0, 0, 0)
     if method == histogram:
-        param = (8, 64, 5)
+        param = (8, 30, 3)
     if method == dft or method == dct:
-        param = (6, 20, 2)
+        param = (6, 30, 3)
     if method == gradient:
-        param = (2, 20, 1)
+        param = (2, 30, 3)
     if method == scale:
-        param = (0.03, 0.5, 0.05)
+        param = (0.05, 0.5, 0.05)
 
     best_param = param[0]
     classf = test_classifier(train, test, method, best_param)
@@ -198,6 +242,8 @@ def fit(train, test, method):
             classf = new_classf
             best_param = i
 
+    if SHOW:
+        plt.plot(stat[0], stat[1], label=method.__name__)
     return [best_param, classf], stat
 
 
@@ -229,11 +275,12 @@ def test_voting(train, test, parameters):
     return sum / len(test[0])
 
 
-def cross_validation(data):
+def cross_validation(data, etalons_range, SHOW=False):
     methods = [histogram, dft, dct, gradient, scale]
     res = []
-    start = 1
-    end = 7
+    start, end = etalons_range
+    faces_in_train_stats = {}
+    vote_stats = []
     for size in range(start, end):
         print(f"{size} FACES IN TRAIN, {10 - size} FACES IN TEST")
         X_train, X_test, y_train, y_test = split_data(data, size)
@@ -243,15 +290,34 @@ def cross_validation(data):
         for method in methods:
             print("-"*50)
             print(f"fitting params for {method.__name__}...")
-            results = fit(train, test, method)
+            results = fit(train, test, method, SHOW=SHOW)
+            if method.__name__ in faces_in_train_stats:
+                faces_in_train_stats[method.__name__].append(results[0][1])
+            else:
+                faces_in_train_stats[method.__name__] = [results[0][1]]
             parameters[method.__name__] = results[0][0]
             print(f"for {method.__name__} got param {results[0][0]} with score {results[0][1]}")
+        if SHOW:
+            plt.title(f"train size={size}"), plt.legend(loc='best'), plt.xlabel("parameter"), plt.ylabel("score")
+            # plt.savefig(f"./cross_valid/dummy_gradient_train_size_{size}.jpg")
+            plt.show()
+            # draw_splited_data(X_train, X_test, size)
         print("-" * 50)
         print(f"Result of fitting for all methods: {parameters}")
         print("Voting...")
         classf = test_voting(train, test, parameters)
+        vote_stats.append(classf)
         print(f"voted accuracy: {classf}")
         res.append([parameters, classf])
+
+    if SHOW:
+        for method, stats in faces_in_train_stats.items():
+            plt.plot(range(1, len(stats) + 1), stats, label=method)
+            plt.legend(loc='best'), plt.xlabel("train size"), plt.ylabel("score")
+        plt.show()
+        plt.plot(range(1, len(vote_stats) + 1), vote_stats), plt.title("Voting")
+        plt.xlabel("train size"), plt.ylabel("voted_score")
+        plt.show()
 
     best_res = [[], 0]
     best = 0
@@ -272,15 +338,40 @@ def vote_classifier(data):
 
 
 if __name__ == "__main__":
+    print("Accessing to database...")
     data = load_faces_from("./orl_faces/s")
-    parameters, train_size, score = cross_validation(data)
+    print(f"Database is uploaded: ORL faces, {len(data[0])} images, 40 classes, 10 images in each class")
+    print("="*50)
+
+    print("Check train for each method:")
+    x_train, x_test, y_train, y_test = split_data(data, 1)
+    train = mesh_data([x_train, y_train])
+    test = mesh_data([x_test, y_test])
+
+    for method, param in [(histogram, 18), (dft, 18), (dct, 8), (gradient, 8), (scale, 0.23)]:
+        classf = test_classifier(train, train, method, param)
+        print(f"for {method.__name__} got {int(classf)*100}% score")
+    print("="*50)
+
+    print("Check test for each method:")
+    for method, param in [(histogram, 28), (dft, 18), (dct, 18), (gradient, 2), (scale, 0.23)]:
+        classf = test_classifier(train, test, method, param)
+        print(f"for {method.__name__} got {classf} score")
+    print("="*50)
+
+    print("Cross-validation...")
+    parameters, train_size, score = cross_validation(data, etalons_range=[1, 3], SHOW=False)
     print("!"*50)
     print(f"best train size: {train_size}\n with parameters: {parameters}\n and score: {score}")
     print("!" * 50)
-    x_train, x_test, y_train, y_test = split_data(data, train_size)
-    train = mesh_data([x_train, y_train])
-    test = (x_test, y_test)
-    v = voting(train, test, parameters)
-    print("=" * 50)
-    print("true answers:\n", y_test[:10])
-    print("voted answers:\n", v[:10])
+
+
+'''
+dft = 15
+dct = 8
+hist = 23
+scale = 0.2
+gradient = 4
+dummy_grad = 2
+faces_in_train = 5
+'''
