@@ -77,7 +77,7 @@ def dct(image, p=13, SHOW=False):
 #     return result
 
 
-def gradient(image, n = 2):
+def gradient(image, n=2):
     shape = image.shape[0]
     i, l = 0, 0
     r = n
@@ -105,6 +105,7 @@ def scale(image, scale=0.35, SHOW=False):
 
 
 def load_faces_from(data_folder, type=".pgm"):
+    print("Accessing to database...")
     data_faces = []
     data_target = []
     for i in range(1, 41):
@@ -114,6 +115,8 @@ def load_faces_from(data_folder, type=".pgm"):
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 data_faces.append(image / 255)
                 data_target.append(i - 1)
+    print(f"Database is uploaded: ORL faces, {len(data_faces)} images, 40 classes, 10 images in each class")
+    print("=" * 50)
     return [data_faces, data_target]
 
 
@@ -150,6 +153,25 @@ def draw_splited_data(x_train, x_test, images_per_person_in_train, rows=5):
                 draw_train = images_per_person_in_train
                 draw_test = 10 - images_per_person_in_train
         plt.show()
+
+
+def split_data_not_random(data, images_per_person_in_train=5, DRAW=False):
+    images_per_person = 10
+    images_all = len(data[0])
+
+    x_train, x_test, y_train, y_test = [], [], [], []
+
+    for i in range(0, images_all, images_per_person):
+        x_train.extend(data[0][i: i + images_per_person_in_train])
+        y_train.extend(data[1][i: i + images_per_person_in_train])
+
+        x_test.extend(data[0][i + images_per_person_in_train: i + images_per_person])
+        y_test.extend(data[1][i + images_per_person_in_train: i + images_per_person])
+
+    if DRAW:
+        draw_splited_data(x_train, x_test, images_per_person_in_train)
+
+    return x_train, x_test, y_train, y_test
 
 
 def split_data(data, images_per_person_in_train=5, DRAW=False):
@@ -247,7 +269,7 @@ def fit(train, test, method, SHOW=False):
     return [best_param, classf], stat
 
 
-def voting(train, test, parameters):
+def voting(train, test, parameters, SHOW=False):
     methods = [histogram, dft, dct, gradient, scale]
     res = {}
     for method in methods:
@@ -263,15 +285,16 @@ def voting(train, test, parameters):
                 answers_to_image_1[answer] = 1
         best_size = sorted(answers_to_image_1.items(), key=lambda item: item[1], reverse=True)[0]
         voted_answers.append(best_size[0])
-        for image, person in zip(train[0], train[1]):
-            if person == best_size[0]:
-                plt.subplot(1, 2, 1)
-                plt.imshow(test[0][i], cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Query Image')
-                plt.subplot(1, 2, 2)
-                plt.imshow(image, cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Result')
-                plt.suptitle(f"Voting")
-                plt.show()
-                break
+        if SHOW:
+            for image, person in zip(train[0], train[1]):
+                if person == best_size[0]:
+                    plt.subplot(1, 2, 1)
+                    plt.imshow(test[0][i], cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Query Image')
+                    plt.subplot(1, 2, 2)
+                    plt.imshow(image, cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title('Result')
+                    plt.suptitle(f"Voting")
+                    plt.show()
+                    break
 
     return voted_answers
 
@@ -285,7 +308,7 @@ def test_voting(train, test, parameters):
     return sum / len(test[0])
 
 
-def cross_validation(data, etalons_range=[5,6], SHOW=False):
+def cross_validation(data, etalons_range=[5, 6], SHOW=False):
     methods = [histogram, dft, dct, gradient, scale]
     res = []
     start, end = etalons_range
@@ -298,7 +321,7 @@ def cross_validation(data, etalons_range=[5,6], SHOW=False):
         test = mesh_data([X_test, y_test])
         parameters = {}
         for method in methods:
-            print("-"*50)
+            print("-" * 50)
             print(f"fitting params for {method.__name__}...")
             results = fit(train, test, method, SHOW=SHOW)
             if method.__name__ in faces_in_train_stats:
@@ -340,22 +363,19 @@ def cross_validation(data, etalons_range=[5,6], SHOW=False):
     return best_res
 
 
-def vote_classifier(data):
+def vote_classifier(data, SHOW=False):
     # parameters, train_size = cross_validation(data)
     train_size = 5
     parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
-    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=True)
+    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=SHOW)
     train = mesh_data([x_train, y_train])
     test = mesh_data([x_test, y_test])
-    return voting(train, test, parameters)
+    return voting(train, test, parameters, SHOW=SHOW)
 
 
 if __name__ == "__main__":
-    print("Accessing to database...")
     data = load_faces_from("./orl_faces/s")
-    print(f"Database is uploaded: ORL faces, {len(data[0])} images, 40 classes, 10 images in each class")
-    print("="*50)
-    #
+
     # print("Check train for each method:")
     # x_train, x_test, y_train, y_test = split_data(data, 1)
     # train = mesh_data([x_train, y_train])
@@ -378,21 +398,43 @@ if __name__ == "__main__":
     # print(f"best train size: {train_size}\n with parameters: {parameters}\n and score: {score}")
     # print("!" * 50)
 
-    # vote_classifier(data)
-
-    train_size = 5
-    parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
-    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=True)
-    # cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
-    # _, x_test, _, y_test = split_data(cloaked_data, 5)
-    # train = mesh_data([x_train, y_train])
-    # test = mesh_data([x_test, y_test])
-    # voting(train, test, parameters)
+    # vote_classifier(data), SHOW=True!!
 
 
-    masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
-    test = [masked_data[0], masked_data[1]]
-    voting(train, test, parameters)
+    res = []
+    for _ in range(10):
+        masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
+        train_size = 5
+        parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+        x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
+        # cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
+        # _, x_test, _, y_test = split_data(cloaked_data, 5)
+        train = mesh_data([x_train, y_train])
+        test = mesh_data([x_test, y_test])
+        # voting(train, test, parameters, SHOW=True)
+
+        test = mesh_data([masked_data[0], masked_data[1]])
+        classf = test_voting(train, test, parameters)
+        res.append(classf)
+        print(classf)
+    print("mean", np.mean(res))
+    res = []
+    for _ in range(10):
+        # masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
+        train_size = 5
+        parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+        x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
+        cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
+        _, x_test, _, y_test = split_data(cloaked_data, 5)
+        train = mesh_data([x_train, y_train])
+        test = mesh_data([x_test, y_test])
+        # voting(train, test, parameters, SHOW=True)
+
+        # test = mesh_data([masked_data[0], masked_data[1]])
+        classf = test_voting(train, test, parameters)
+        res.append(classf)
+        print(classf)
+    print("mean", np.mean(res))
 
 '''
 dft = 15
