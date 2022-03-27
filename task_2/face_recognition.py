@@ -4,6 +4,38 @@ from scipy.fftpack import dct as sc_dct
 import cv2
 import matplotlib.pyplot as plt
 
+def my_classifier(train, test, method, parameter):
+    if method not in [histogram, dft, dct, gradient, scale]:
+        return []
+    featured_train = create_feature(train[0], method, parameter)
+    featured_test = create_feature(test[0], method, parameter)
+    ans = []
+    for test_element in featured_test:
+        min_el = [100000, -1]
+        for i in range(len(featured_train)):
+            dist = distance(test_element, featured_train[i])
+            if dist < min_el[0]:
+                min_el = [dist, i]
+        if min_el[1] < 0:
+            ans = train[0][0]
+        else:
+            ans = train[0][min_el[1]]
+    return ans
+
+def classify_image(train, query_image, methods, params, train_size=5):
+    plt.subplot(2, 3, 1)
+    plt.imshow(query_image, cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title(f'Query Image')
+
+    index = 2
+    for method, parameter in zip(methods, params):
+        answer = my_classifier(train, ([query_image], [0]), method, parameter)
+        plt.subplot(2, 3, index)
+        index += 1
+        plt.imshow(answer, cmap="gray"), plt.xticks([]), plt.yticks([]), plt.title(f"{method.__name__}, {parameter}")
+    plt.suptitle(f"train size={train_size}")
+    plt.savefig(f"./results/{count}.jpg")
+
+
 
 def histogram(image, BINS=30, SHOW=False):
     hist, bin_edges = np.histogram(image, bins=BINS, range=(0, 1))
@@ -401,40 +433,67 @@ if __name__ == "__main__":
     # vote_classifier(data), SHOW=True!!
 
 
-    res = []
-    for _ in range(10):
-        masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
-        train_size = 5
-        parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
-        x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
-        # cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
-        # _, x_test, _, y_test = split_data(cloaked_data, 5)
-        train = mesh_data([x_train, y_train])
-        test = mesh_data([x_test, y_test])
-        # voting(train, test, parameters, SHOW=True)
+    # res = []
+    # for _ in range(10):
+    #     masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
+    #     train_size = 5
+    #     parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+    #     x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
+    #     # cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
+    #     # _, x_test, _, y_test = split_data(cloaked_data, 5)
+    #     train = mesh_data([x_train, y_train])
+    #     test = mesh_data([x_test, y_test])
+    #     # voting(train, test, parameters, SHOW=True)
+    #
+    #     test = mesh_data([masked_data[0], masked_data[1]])
+    #     classf = test_voting(train, test, parameters)
+    #     res.append(classf)
+    #     print(classf)
+    # print("mean", np.mean(res))
+    # res = []
+    # for _ in range(10):
+    #     # masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
+    #     train_size = 5
+    #     parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
+    #     x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
+    #     cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
+    #     _, x_test, _, y_test = split_data(cloaked_data, 5)
+    #     train = mesh_data([x_train, y_train])
+    #     test = mesh_data([x_test, y_test])
+    #     # voting(train, test, parameters, SHOW=True)
+    #
+    #     # test = mesh_data([masked_data[0], masked_data[1]])
+    #     classf = test_voting(train, test, parameters)
+    #     res.append(classf)
+    #     print(classf)
+    # print("mean", np.mean(res))
 
-        test = mesh_data([masked_data[0], masked_data[1]])
-        classf = test_voting(train, test, parameters)
-        res.append(classf)
-        print(classf)
-    print("mean", np.mean(res))
-    res = []
-    for _ in range(10):
-        # masked_data = load_faces_from("./orl_faces_with_mask/s", type='-with-mask.jpg')
-        train_size = 5
-        parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.4}
-        x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=False)
-        cloaked_data = load_faces_from("./orl_faces_high_cloaked/s", type='_cloaked.jpg')
-        _, x_test, _, y_test = split_data(cloaked_data, 5)
-        train = mesh_data([x_train, y_train])
-        test = mesh_data([x_test, y_test])
-        # voting(train, test, parameters, SHOW=True)
+    train_size = 5
+    methods = [histogram, dft, dct, gradient, scale]
+    parameters = {'histogram': 17, 'dft': 18, 'dct': 9, 'gradient': 2, 'scale': 0.2}
+    SHOW = False
+    x_train, x_test, y_train, y_test = split_data(data, train_size, DRAW=SHOW)
+    train = [x_train, y_train]
+    result = []
+    count = 0
+    sum = 0
+    
+    for test_image, true_answer in zip(x_test, y_test):
+        # classf = test_voting(train, (x_test[:i], y_test[:i]), parameters)
+        res = voting(train, [[test_image], [true_answer]], parameters)
+        if true_answer == res[0]:
+            sum += 1
+        else:
+            print(f"!!!!!!!")
+            classify_image(train, test_image, methods, params=[17, 18, 9, 2, 0.2])
+        count += 1
+        result.append(sum / count)
+        print(f"{count} images --> {sum / count}")
+    plt.show()
+    plt.plot(range(1, len(result) + 1),  result), plt.xlabel("amount of test images"), plt.ylabel("score"), plt.title("Voting")
+    plt.savefig(f"./results/{count}.jpg")
 
-        # test = mesh_data([masked_data[0], masked_data[1]])
-        classf = test_voting(train, test, parameters)
-        res.append(classf)
-        print(classf)
-    print("mean", np.mean(res))
+
 
 '''
 dft = 15
@@ -444,4 +503,29 @@ scale = 0.2
 gradient = 4
 dummy_grad = 2
 faces_in_train = 5
+
+0.4845360824742268
+0.5231958762886598
+0.5489690721649485
+0.5335051546391752
+0.5798969072164949
+0.5592783505154639
+0.5257731958762887
+0.5463917525773195
+0.5463917525773195
+0.5721649484536082
+mean 0.5420103092783505
+0.99
+0.975
+0.99
+0.975
+1.0
+0.98
+0.98
+0.99
+0.975
+0.995
+mean 0.985
 '''
+
+
