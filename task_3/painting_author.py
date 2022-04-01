@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 
 
 def canny(img):
-    edges = cv2.Canny(img, 220, 230)
-    return edges
+    edges = cv2.Canny(img, 200, 220)
+    amount_of_edges = len(edges[edges == 255])
+    return amount_of_edges, edges
 
-#methods:  {'canny': 0.40625, 'color_hist': 0.625, 'random': 0.4375}
+
+# methods:  {'canny': 0.40625, 'color_hist': 0.625, 'random': 0.4375}
 # voting --> 0.59375
 def color_hist(img):
     color = ('b', 'g', 'r')
@@ -107,7 +109,7 @@ def split_data_cross(data, images_per_class=10, images_per_person_in_train=5, tr
 
 
 def create_feature(images, method):
-    return [method(image)[0] if method == random else method(image) for image in images]
+    return [method(image) if method == color_hist else method(image)[0] for image in images]
 
 
 def distance(el1, el2):
@@ -173,14 +175,14 @@ def draw_methods(image):
     plt.subplot(1, 4, 1, title="Original")
     plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.axis("off")
 
-    edges = canny(image)
+    edges = canny(image)[1]
     plt.subplot(1, 4, 2, title="Canny")
     plt.imshow(edges, cmap="gray"), plt.axis("off")
 
     hists = color_hist(image)
     plt.subplot(1, 4, 3, title="Histogram")
     for hist, col in zip(hists, ('b', 'g', 'r')):
-        plt.plot(range(len(hist)), hist, col), plt.yticks([])
+        plt.plot(range(len(hist)), hist, col)
 
     centers = random(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))[1]
     plt.subplot(1, 4, 4, title="Random")
@@ -234,45 +236,51 @@ if __name__ == "__main__":
     classes = {0: "И. И. Шишкин", 1: "И. К. Айвазовский",
                2: "П. Пикассо", 3: "В. И. Суриков"}
 
-    seed = 52
-    rnd.seed(seed)  # seed=52 methods:  {'canny': 0.40625, 'color_hist': 0.625, 'random': 0.4375} voting --> 0.625
+    seed = 52  # seed=52 methods:  {'canny': 0.40625, 'color_hist': 0.625, 'random': 0.4375} voting --> 0.6875
+    # (with weight to Histogram)
+    '''
+    9 PAINTS IN TRAIN, 7 PAINTS IN TEST, seed=38
+    methods:  {'canny': 0.32142857142857145, 'color_hist': 0.6785714285714286, 'random': 0.35714285714285715}
+    voting --> 0.6428571428571429
+    '''
+
+    print(f"seed={seed}")
+    rnd.seed(seed)
     # for size in range(1, 16):
     x_train, x_test, y_train, y_test = split_data_random(data, 16, size, seed=seed)
     train = [x_train, y_train]
     test = [x_test, y_test]
+    res = test_methods(train, test)
+    classf = test_voting(train, test)
+    # if classf >= 0.6:
+    print(f"{size} PAINTS IN TRAIN, {16 - size} PAINTS IN TEST, seed={seed}")
+    print("methods: ", res)
+    print(f"voting --> {classf}")
+    print("*" * 10)
 
-    # res = test_methods(train, test)
-    # classf = test_voting(train, test)
-    # print(f"{size} PAINTS IN TRAIN, {16 - size} PAINTS IN TEST, seed={seed}")
-    # print("methods: ", res)
-    # print(f"voting --> {classf}")
-    # print("*" * 10)
-    count = 0
-    summ = 0
-    result = []
-    for test_image, true_answer in zip(x_test, y_test):
-
-        res = voting(train, [[test_image], [true_answer]])
-        # res = classifier(train, test, color_hist)
-        if true_answer == res[0]:
-            summ += 1
-        else:
-            print(f"return {classes[res[0]]} but true is {classes[true_answer]}")
-            res = {}
-            for method in get_methods():
-                answers = classifier(train, [[test_image], [true_answer]], method)
-                print(f"method {method.__name__} found {classes[answers[0]]}")
-            print(test_methods(train, [[test_image], [true_answer]]))
-            plt.imshow(cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)), plt.axis("off")
-            plt.show()
-        count += 1
-        result.append(summ / count)
-        print(f"{count} images --> {summ / count}")
-    plt.plot(range(1, len(result) + 1),  result), plt.xlabel("amount of test images"), plt.ylabel("score"), plt.title("Voting")
-    plt.show()
-
-
-
+    # count = 0
+    # summ = 0
+    # result = []
+    # for test_image, true_answer in zip(x_test, y_test):
+    #
+    #     res = voting(train, [[test_image], [true_answer]])
+    #     # res = classifier(train, test, color_hist)
+    #     if true_answer == res[0]:
+    #         summ += 1
+    #     else:
+    #         print(f"return {classes[res[0]]} but true is {classes[true_answer]}")
+    #         res = {}
+    #         for method in get_methods():
+    #             answers = classifier(train, [[test_image], [true_answer]], method)
+    #             print(f"method {method.__name__} found {classes[answers[0]]}")
+    #         print(test_methods(train, [[test_image], [true_answer]]))
+    #         plt.imshow(cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)), plt.axis("off")
+    #         plt.show()
+    #     count += 1
+    #     result.append(summ / count)
+    #     print(f"{count} images --> {summ / count}")
+    # plt.plot(range(1, len(result) + 1),  result), plt.xlabel("amount of test images"), plt.ylabel("score"), plt.title("Voting")
+    # plt.show()
 
     # count = 1
     # plt.rcParams["figure.figsize"] = (10, 6)
