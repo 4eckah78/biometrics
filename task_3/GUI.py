@@ -7,45 +7,49 @@ image = None
 data = []
 train = []
 test = []
-train_size = 8
-seed = 52
+featured_train = {}
+train_size, seed, classes = get_size_and_seed()
 methods = get_methods()
-classes = {0: "Шишкин", 1: "Айвазовский",
-           2: "Пикассо", 3: "Суриков"}
 plt.rcParams["figure.figsize"] = [8, 5]
 
 
 def browseFiles():
-    global image
-    image_path = filedialog.askopenfilename(initialdir="C:/Paints/",
-                                            title="Select a File",
-                                            filetypes=[("Image files", "*.jpg *.png *.pgm")])
-    image = cv2.imread(image_path)
-    label_database.configure(text="✓ File selected")
+    if len(data) == 0:
+        label_database.configure(text="You need to upload a database first!")
+    else:
+        global image
+        image_path = filedialog.askopenfilename(initialdir="C:/Paints/",
+                                                title="Select a File",
+                                                filetypes=[("Image files", "*.jpg *.png *.pgm")])
+        image = cv2.imread(image_path)
+        label_database.configure(text="✓ File selected")
 
 
 def load():
-    global data, train, test
-    data = load_paintings_from("./Paints/s", 4, 16)
-    label_database.configure(text="✓ Database is uploaded")
+    label_database.configure(text="Database is uploading...")
+    global data, train, test, featured_train
+    data = load_paintings_from("./Paints/s", len(classes), 16)
     x_train, x_test, y_train, y_test = split_data_random(data, 16, train_size, seed=seed)
     train = [x_train, y_train]
     test = [x_test, y_test]
+    start = time.time()
+    featured_train = {method.__name__: create_feature(x_train, method) for method in get_methods()}
+    label_database.configure(text="✓ Database is uploaded")
+    print(f"Database loaded in {int(time.time() - start)} seconds")
 
 
 def classify():
     if image is None:
         label_database.configure(text="You need to upload an image first!")
     else:
-        answer = voting(train, [[image], [0]])
+        answer = voting(train, [[image], [0]], SHOW=True, use_database=featured_train)
+        label_database.configure(text=classes[answer[0]])
 
-        plt.subplot(1, 2, 1, title="Query Image")
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.axis("off")
-        plt.subplot(1, 2, 2, title="Result"), plt.axis("off")
+        plt.subplot(3, 3, 8, title="Result"), plt.axis("off")
         plt.text(0.3,
                  0.5,
                  classes[answer[0]],
-                 transform=plt.gca().transAxes, fontdict={'size': 22})
+                 transform=plt.gca().transAxes, fontdict={'size': 12})
         plt.show()
 
 
@@ -58,35 +62,41 @@ def show():
 
 
 def test():
-    for test_img in test[0]:
-        answer = voting(train, [[test_img], [0]])
-
-        plt.subplot(1, 2, 1, title="Query Image")
-        plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)), plt.axis("off")
-        plt.subplot(1, 2, 2, title="Result"), plt.axis("off")
-        plt.text(0.3,
-                 0.5,
-                 classes[answer[0]],
-                 transform=plt.gca().transAxes, fontdict={'size': 22})
-        plt.show(block=False)
-        plt.pause(2)
-        plt.close()
+    if len(data) == 0:
+        label_database.configure(text="You need to upload a database first!")
+    else:
+        for test_img in test[0]:
+            answer = voting(train, [[test_img], [0]], SHOW=True, use_database=featured_train)
+            label_database.configure(text=classes[answer[0]])
+            # plt.subplot(1, 2, 1, title="Query Image")
+            # plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)), plt.axis("off")
+            plt.subplot(3, 3, 8, title="Result"), plt.axis("off")
+            plt.text(0.3,
+                     0.5,
+                     classes[answer[0]],
+                     transform=plt.gca().transAxes, fontdict={'size': 12})
+            plt.show()
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
 
 
 def test_on_train():
-    for train_img in train[0]:
-        answer = voting(train, [[train_img], [0]])
-
-        plt.subplot(1, 2, 1, title="Query Image")
-        plt.imshow(cv2.cvtColor(train_img, cv2.COLOR_BGR2RGB)), plt.axis("off")
-        plt.subplot(1, 2, 2, title="Result"), plt.axis("off")
-        plt.text(0.3,
-                 0.5,
-                 classes[answer[0]],
-                 transform=plt.gca().transAxes, fontdict={'size': 22})
-        plt.show(block=False)
-        plt.pause(2)
-        plt.close()
+    if len(data) == 0:
+        label_database.configure(text="You need to upload a database first!")
+    else:
+        for train_img in train[0]:
+            answer = voting(train, [[train_img], [0]], SHOW=True, use_database=featured_train)
+            label_database.configure(text=classes[answer[0]])
+            plt.subplot(3, 3, 8, title="Result"), plt.axis("off")
+            plt.text(0.3,
+                     0.5,
+                     classes[answer[0]],
+                     transform=plt.gca().transAxes, fontdict={'size': 12})
+            plt.show()
+            plt.show(block=False)
+            plt.pause(2)
+            plt.close()
 
 
 if __name__ == "__main__":
